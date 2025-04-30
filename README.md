@@ -1,1 +1,1 @@
-# RISC-V-Workshop
+# RISC-V Workshop
