@@ -15,14 +15,8 @@
    |comp
       @1
          $err1 = $bad_input | $illegal_op;
-      @2
-         
       @3
          $err2 = $err1 | $over_flow;
-      @4
-         
-      @5
-         
       @6
          $err3 = $err2 | $div_by_zero;
    
