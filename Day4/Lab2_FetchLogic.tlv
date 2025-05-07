@@ -47,8 +47,53 @@
 
       // YOUR CODE HERE       
       @1   
+         //implmentation plan for PC
          $imem_rd_addr[M4_IMEM_INDEX_CNT-1 : 0] = $imem_rd_data[31:0];
          $instr[31:0] = $pc[M4_IMEM_INDEX_CNT+1 : 2] / 4;
+         $is_i_instr = $instr[6:2] ==? 5'b0000x || $instr[6:2] ==? 5'b001x0 || $instr[6:2] ==? 5'b11001 || $instr[6:2] ==? 5'b11100;
+         $is_u_instr = $instr[6:2] ==? 5'b0x101;
+         $is_s_instr = $instr[6:2] ==? 5'b0100x;
+         $is_b_instr = $instr[6:2] ==? 5'b11000;
+         $is_j_instr = $instr[6:2] ==? 5'b11011;
+         $is_r_instr = $instr[6:2] ==? 5'b01011 || $instr[6:2] ==? 5'b011x0 || $instr[6:2] ==? 5'b10100;
+         
+         //Instruction Immediate Decode Logic For RV-ISBUJ
+         $imm[31:0] = $is_i_instr ? {{21{$instr[6:2]}}, $instr[30:20]} :
+                      $is_s_instr ? {{21{$instr[6:2]}}, $instr[30:25],$instr[11:7]} :
+                      $is_b_instr ? {{20{$instr[6:2]}}, {2{$instr[7]}}, $instr[30:25], $instr[11:8]} :
+                      $is_u_instr ? $instr[31:12] :
+                      $is_j_instr ? {{11{$instr[31]}}, $instr[19:12], $instr[20], $instr[30:21]} : 32'd0 ;
+         
+         //Decode other Fields of Instructions For RV-ISBUJ
+         $opcode = $instr[6:0];
+         // ....$rs2 = $instr[24:20];
+         //Decode Instruction Field Based on Instr Type RV-ISBUJ
+         $rs2_valid = $is_i_instr || $is_s_instr || $is_b_instr;
+         ?$rs2_valid
+            $rs2 = $instr[24:20];
+         $funct7_valid = $is_r_instr;
+         ?$funct7_valid
+            $funct7 = $instr[31:25];
+         $funct3_valid = $is_r_instr || $is_i_instr || $is_s_instr || $is_b_instr;
+         ?$funct3_valid
+            $funct3 = $instr[14:12];
+         $rd_valid = $is_r_instr || $is_i_instr || $is_u_instr || $is_j_instr;
+         ?$rd_valid
+            $rd = $instr[11:7];
+         
+         //Lab7Decode Individual Instruction
+         $dec_bits[10:0] = {$funct7,$funct3,$opcode};
+         $is_beq = $dec_bits ==? 11'bx_000_1100011;
+         $is_bnu = $dec_bits ==? 11'bx_001_1100011;
+         $is_blt = $dec_bits ==? 11'bx_100_1100011;
+         $is_bge = $dec_bits ==? 11'bx_101_1100011;
+         $is_bltu = $dec_bits ==? 11'bx_110_1100011;
+         $is_bgeu = $dec_bits ==? 11'bx_111_1100011;
+         
+         $is_addi = $dec_bits ==? 11'bx_000_0010011;
+         $is_add = $dec_bits ==? 11'b0_000_0110011;
+         
+         `BOGUS_USE($is_beq $is_bnu $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add)
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
       //       be sure to avoid having unassigned signals (which you might be using for random inputs)
       //       other than those specifically expected in the labs. You'll get strange errors for these.
@@ -70,6 +115,6 @@
       //m4+alu(@1,@1)
 
    //m4+solution(100)
-   //m4+cpu_viz(@4)    // For visualisation, argument should be at least equal to the last stage of CPU logic. @4 would work for all labs.
+   m4+cpu_viz(@4)    // For visualisation, argument should be at least equal to the last stage of CPU logic. @4 would work for all labs.
 \SV
    endmodule
