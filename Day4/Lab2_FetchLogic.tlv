@@ -40,44 +40,56 @@
    |cpu
       @0
          $reset = *reset;
-         $pc[31:0] = $reset ? 32'd0 : >>1$pc[31:0] + 32'd4;
-         $pc[31:0] = $imem_rd[31:0];
+         $pc[31:0] = >>1$reset ? 32'b0 :
+                     >>1$taken_br ? >>1$pc + 32'd4 :
+                     >>1$br_tgt_pc;
          $imem_rd_en = ~$reset;
 
 
       // YOUR CODE HERE       
       @1   
          //implmentation plan for PC
-         $imem_rd_addr[M4_IMEM_INDEX_CNT-1 : 0] = $imem_rd_data[31:0];
-         $instr[31:0] = $pc[M4_IMEM_INDEX_CNT+1 : 2] / 4;
-         $is_i_instr = $instr[6:2] ==? 5'b0000x || $instr[6:2] ==? 5'b001x0 || $instr[6:2] ==? 5'b11001 || $instr[6:2] ==? 5'b11100;
+         $imem_rd_addr[7:0] = $pc / 4;
+         $instr[31:0] = $imem_rd_data[31:0];
+         
+         $is_i_instr = $instr[6:2] ==? 5'b0000x || 
+                        $instr[6:2] ==? 5'b001x0 || 
+                        $instr[6:2] ==? 5'b11001 || 
+                        $instr[6:2] ==? 5'b11100;
          $is_u_instr = $instr[6:2] ==? 5'b0x101;
          $is_s_instr = $instr[6:2] ==? 5'b0100x;
          $is_b_instr = $instr[6:2] ==? 5'b11000;
          $is_j_instr = $instr[6:2] ==? 5'b11011;
-         $is_r_instr = $instr[6:2] ==? 5'b01011 || $instr[6:2] ==? 5'b011x0 || $instr[6:2] ==? 5'b10100;
+         $is_r_instr = $instr[6:2] ==? 5'b01011 || 
+                        $instr[6:2] ==? 5'b011x0 || 
+                        $instr[6:2] ==? 5'b10100;
          
          //Instruction Immediate Decode Logic For RV-ISBUJ
          $imm[31:0] = $is_i_instr ? {{21{$instr[6:2]}}, $instr[30:20]} :
                       $is_s_instr ? {{21{$instr[6:2]}}, $instr[30:25],$instr[11:7]} :
-                      $is_b_instr ? {{20{$instr[6:2]}}, {2{$instr[7]}}, $instr[30:25], $instr[11:8]} :
-                      $is_u_instr ? $instr[31:12] :
-                      $is_j_instr ? {{11{$instr[31]}}, $instr[19:12], $instr[20], $instr[30:21]} : 32'd0 ;
+                      $is_b_instr ? {{20{$instr[6:2]}}, {2{$instr[7]}}, $instr[30:25], $instr[11:8],1'b0} :
+                      $is_u_instr ? {$instr[31:12], 12'b0} :
+                      $is_j_instr ? {{12{$instr[31]}}, $instr[19:12], $instr[20], $instr[30:21],1'b0} :
+                      32'b0 ;
+         
          
          //Decode other Fields of Instructions For RV-ISBUJ
          $opcode = $instr[6:0];
          // ....$rs2 = $instr[24:20];
          //Decode Instruction Field Based on Instr Type RV-ISBUJ
-         $rs2_valid = $is_i_instr || $is_s_instr || $is_b_instr;
+         $rs1_valid = $is_u_instr || $is_j_instr ? 1'b1 : 1'b0;
+         ?$rs1_valid
+            $rs1 = $instr[19:5];
+         $rs2_valid = $is_i_instr || $is_s_instr || $is_b_instr ? 1'b1 : 1'b0;
          ?$rs2_valid
             $rs2 = $instr[24:20];
-         $funct7_valid = $is_r_instr;
+         $funct7_valid =  $is_r_instr ? 1'b1 : 1'b0;
          ?$funct7_valid
             $funct7 = $instr[31:25];
-         $funct3_valid = $is_r_instr || $is_i_instr || $is_s_instr || $is_b_instr;
+         $funct3_valid = $is_r_instr || $is_i_instr || $is_s_instr || $is_b_instr ? 1'b1 : 1'b0;
          ?$funct3_valid
             $funct3 = $instr[14:12];
-         $rd_valid = $is_r_instr || $is_i_instr || $is_u_instr || $is_j_instr;
+         $rd_valid = $is_r_instr || $is_i_instr || $is_u_instr || $is_j_instr ? 1'b1 : 1'b0;
          ?$rd_valid
             $rd = $instr[11:7];
          
@@ -94,14 +106,57 @@
          $is_add = $dec_bits ==? 11'b0_000_0110011;
          
          `BOGUS_USE($is_beq $is_bnu $is_blt $is_bge $is_bltu $is_bgeu $is_addi $is_add)
+         
+         //read enable for register file (part1)
+         $rf_rd_en1 = $rs1 ? $rs1_valid : 1'b0;
+         ?$rf_rd_en1
+            $rf_rd_index1[4:0] = $reset ? 32'o4 : $rs1;
+            $rf_rd_data1[31:0] = $rf_rd_index1[4:0];
+         
+         $rf_rd_en2 =  $rs2 ? $rs2_valid : 1'b0;
+         ?$rf_rd_en2
+            $rf_rd_index2[4:0] = $reset ? 32'o4 : $rs2;
+            $rf_rd_data2[31:0] = $rf_rd_index2[4:0];
+         
+         
+         //Register File Read Part-2
+         
+         $src1_val[31:0] = $rf_rd_data1[31:0];
+         $src2_val[31:0] = $rf_rd_data12[31:0];
+         
+         //ALU Operations For add/addi
+         $result[31:0] = $is_addi ? $src1_val + $imm :
+                           $is_add ? $src1_val + $src2_val :
+                           32'bx;
+         
+         //Register File Write
+         //write enable for register file
+         $rd_wr_en =  $rd ? $rd_valid : 1'b0;
+         ?$rd_wr_en
+            $rf_wr_index[4:0] = $reset ? 32'o4 : $rd !=? 0 ;
+            $rd_wr_data[31:0] = $result;
+         
+         //Branch Instruction Implementation
+         $taken_br[10:0] = ~$is_b_instr ? 1'b0 :
+                     $src1_val == $src2_val ? $is_beq :
+                     $src1_val != $src2_val ? $is_bne :
+                     ($src1_val < $src2_val) ^ ($src1_val[31] != $src2_val) ? $is_blt :
+                     ($src1_val >= $src2_val) ^ ($src1_val[31] != $src2_val) ? $is_bge :
+                     ($src1_val < $src2_val) ? $is_bltu :
+                     $is_bgeu;
+         
+         $br_tgt_pc[31:0] = $pc +$imm;
+         //check if passed
+         *passed = (|cpu/xreg[10]>>5$value == (1+2+3+4+5+6+7+8+9)) ;//&& (*cyc_cnt > 40);
+         *failed = 1'b0;
+         //*passed = *cyc_cnt > 40;
+
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
       //       be sure to avoid having unassigned signals (which you might be using for random inputs)
       //       other than those specifically expected in the labs. You'll get strange errors for these.
 
    
    // Assert these to end simulation (before Makerchip cycle limit).
-   *passed = *cyc_cnt > 40;
-   *failed = 1'b0;
    
    // Macro instantiations for:
    //  o instruction memory
@@ -110,11 +165,9 @@
    //  o CPU visualization
    |cpu
       m4+imem(@1)    // Args: (read stage)
-      //m4+rf(@1, @1)  // Args: (read stage, write stage) - if equal, no register bypass is required
+      m4+rf(@1, @1)  // Args: (read stage, write stage) - if equal, no register bypass is required
       //m4+dmem(@4)    // Args: (read/write stage)
-      //m4+alu(@1,@1)
 
-   //m4+solution(100)
    m4+cpu_viz(@4)    // For visualisation, argument should be at least equal to the last stage of CPU logic. @4 would work for all labs.
 \SV
    endmodule
