@@ -35,3 +35,16 @@
 **L7_Lab To Decode Individual Instruction**
 
 ![day4_lab7_instrDecode](https://github.com/user-attachments/assets/071faf8d-8dc7-4177-ad4d-769a9cfe129b)
+
+# 3) Control Logic
+**For Implementing Branch Instructions, the register file read option for the RF is coded**
+<img width="959" alt="day4_ctrlLogic_lab1" src="https://github.com/user-attachments/assets/5439ee8f-7e97-4904-aeb0-e2b2c2e5b5b9" />
+**ALU Operations are programmed**
+<img width="959" alt="day4_ctrlLogic_lab2" src="https://github.com/user-attachments/assets/5e86abd0-3e1e-422e-a272-7726be226338" />
+**The register file write logic is programmed as shown**
+<img width="959" alt="day4_ctrlLogic_lab3_rfwrite" src="https://github.com/user-attachments/assets/e230c2d3-7633-4a3c-a413-78519cfb9485" />
+
+In the following labs I implemented the branch instructions and included the logic for deciding branch instruction through *taken_br* and *br_tgt_pc*.
+
+***My final code as of Day4 is here -> https://myth.makerchip.com/sandbox/0zpfRhB9N/08qh6Vk# or Day4/BasicRISCVarch.tlv***
+
