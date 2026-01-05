@@ -1,7 +1,7 @@
 # C Program To Compute Sum From 1 to N
   <img width="638" alt="day1_1to9code" src="https://github.com/user-attachments/assets/e69fddd7-cfd4-420f-9ac4-c58d14a45250" />
 
-# Program to find the hishest integer for signed and unsigned
+# Program to find the highest integer for signed and unsigned
 <img width="832" alt="day1_highestintcode" src="https://github.com/user-attachments/assets/8a84c824-59e4-496a-9f88-88e4e3544c64" />
 
 The following notes have been used to access the RISC-V instruction registers:
